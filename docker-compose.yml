@@ -1,0 +1,70 @@
+version: '3.8'
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  pg_data:
+
+services:
+  postgres:
+    restart: always
+    image: postgres
+    volumes:
+      - ./migration:/docker-entrypoint-initdb.d
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=users
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+    command: postgres -c 'shared_preload_libraries='
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d users"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  redis:
+    restart: always
+    image: redis
+    ports:
+      - 6379:6379
+    environment:
+      - PORT_REDIS=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=1
+    networks:
+      - internal
+
+  tsarka-task:
+    build:
+      context: .
+      dockerfile: dockerfile
+    restart: always
+    ports:
+      - target: 8080
+        published: 8080
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DATABASE=users
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=1
+      - HTTP_HOST=localhost
+      - HTTP_PORT=8080
+      - HTTP_WRITETIMEOUT=10s
+      - HTTP_READTIMEOUT=10s
+      - HTTP_MAXHEADERBYTES=1
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - internal
