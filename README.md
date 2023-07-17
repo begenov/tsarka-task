@@ -9,7 +9,11 @@
 
 ### Run
 
-```make run```
+```
+1. docker-compose up
+
+2. go run cmd/main.go
+```
 
 ### Test
 
